@@ -39,7 +39,7 @@ func (n Accessor) IsFDockerBridgeUp() (bool, error) {
 /*
 	This function sets up the "fdocker0" bridge, which is our main bridge
 	interface. To keep things simple, we assign the hopefully unassigned
-	and obscure private IP 172.29.0.1 to it, which is from the range of
+	and obscure private IP 172.31.0.1 to it, which is from the range of
 	IPs which we will also use for our containers.
 */
 
@@ -130,7 +130,7 @@ func (n Accessor) setupContainerNetworkInterfaceStep2(containerID string) {
 	route := netlink.Route{
 		Scope:     netlink.SCOPE_UNIVERSE,
 		LinkIndex: veth1Link.Attrs().Index,
-		Gw:        net.ParseIP("172.29.0.1"),
+		Gw:        net.ParseIP("172.31.0.1"),
 		Dst:       nil,
 	}
 	utils.MustWithMsg(netlink.RouteAdd(&route), "Unable to add default route")
@@ -207,7 +207,7 @@ func (n Accessor) createMACAddress() net.HardwareAddr {
 func (n Accessor) createIPAddress() string {
 	byte1 := rand.Intn(254)
 	byte2 := rand.Intn(254)
-	return fmt.Sprintf("172.29.%d.%d", byte1, byte2)
+	return fmt.Sprintf("172.31.%d.%d", byte1, byte2)
 }
 
 func (n Accessor) UnmountNetworkNamespace(containerID string) {
