@@ -26,11 +26,11 @@ func (e Executor) CmdName() string {
 }
 
 func (e Executor) Implicit() bool {
-	return false
+	return true
 }
 
 func (e Executor) Usage() string {
-	return "f-docker rmi <image-id>"
+	return ""
 }
 
 func (e Executor) Exec() {

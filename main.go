@@ -40,6 +40,6 @@ func usage() {
 	fmt.Println("Usgae: ")
 	usages := cmds.Usage()
 	for _, usage := range usages {
-		fmt.Println(usage)
+		fmt.Println("\t" + usage)
 	}
 }
