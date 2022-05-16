@@ -4,10 +4,10 @@
 package main
 
 import (
+	"fdocker/cmds"
+	"fdocker/utils"
+	"fdocker/workdirs"
 	"fmt"
-	"github.com/shuveb/containers-the-hard-way/cmds"
-	"github.com/shuveb/containers-the-hard-way/utils"
-	"github.com/shuveb/containers-the-hard-way/workdirs"
 	"log"
 	"math/rand"
 	"os"

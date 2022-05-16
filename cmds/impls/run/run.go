@@ -1,12 +1,12 @@
 package run
 
 import (
+	"fdocker/cgroups"
+	"fdocker/image"
+	"fdocker/network"
+	"fdocker/utils"
+	"fdocker/workdirs"
 	"fmt"
-	"github.com/shuveb/containers-the-hard-way/cgroups"
-	"github.com/shuveb/containers-the-hard-way/image"
-	"github.com/shuveb/containers-the-hard-way/network"
-	"github.com/shuveb/containers-the-hard-way/utils"
-	"github.com/shuveb/containers-the-hard-way/workdirs"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/sys/unix"
 	"log"
@@ -72,15 +72,17 @@ func parseFlags() *runArgs {
 		pids:      *pids,
 		cpus:      *cpus,
 		imageName: fs.Args()[0],
-		commands:   fs.Args()[1:],
+		commands:  fs.Args()[1:],
 	}
 }
 
 func setUpBridge() {
 	accessor := network.GetAccessor()
-	if isUp, _ := accessor.IsFDockerBridgeUp(); !isUp {
-		log.Println("Bringing up the fdocker0 bridge...")
-		if err := accessor.SetupFDockerBridge(); err != nil {
+	// Network Step1: set up fdocker0 bridge on host.
+	if ok, err := accessor.IsBridgeSetUp(); !ok || err != nil {
+		utils.Must(err)
+		log.Println("Setting up the fdocker0 bridge on host...")
+		if err := accessor.SetupBridge(); err != nil {
 			log.Fatalf("Unable to create fdocker0 bridge: %v", err)
 		}
 	}
@@ -151,7 +153,7 @@ func unmountContainerFs(containerID string) {
 func prepareAndExecuteContainer(mem int, swap int, pids int, cpus float64,
 	containerID string, imageShaHex string, cmdArgs []string) {
 
-	/* Setup the network namespace  */
+	// Network Step3: Set up the network namespace
 	cmd := &exec.Cmd{
 		Path:   "/proc/self/exe",
 		Args:   []string{"/proc/self/exe", "setup-netns", containerID},
@@ -160,7 +162,7 @@ func prepareAndExecuteContainer(mem int, swap int, pids int, cpus float64,
 	}
 	utils.Must(cmd.Run())
 
-	/* Namespace and setup the virtual interface  */
+	// Network Step4: Set up the virtual interface on namespace
 	cmd = &exec.Cmd{
 		Path:   "/proc/self/exe",
 		Args:   []string{"/proc/self/exe", "setup-veth", containerID},
@@ -226,6 +228,7 @@ func initContainer(args *runArgs) {
 	log.Printf("Image to overlay mount: %s\n", imageShaHex)
 	createContainerDirectories(containerID)
 	mountOverlayFileSystem(containerID, imageShaHex)
+	// Network Step2: set up virtual eth connecting from f-docker bridge on host to another virtual eth
 	if err := netAccessor.SetupVirtualEthOnHost(containerID); err != nil {
 		log.Fatalf("Unable to setup Veth0 on host: %v", err)
 	}

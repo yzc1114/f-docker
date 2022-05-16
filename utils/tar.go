@@ -1,6 +1,5 @@
 package utils
 
-
 import (
 	"archive/tar"
 	"io"

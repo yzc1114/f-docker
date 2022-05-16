@@ -1,6 +1,6 @@
 package workdirs
 
-import "github.com/shuveb/containers-the-hard-way/utils"
+import "fdocker/utils"
 
 const FDHomePath = "/var/lib/f-docker"
 const FDTempPath = FDHomePath + "/tmp"
@@ -9,7 +9,7 @@ const FDContainersPath = "/var/run/f-docker/containers"
 const FDNetNsPath = "/var/run/f-docker/net-ns"
 
 func Init() error {
-	dirs := []string {FDHomePath, FDTempPath, FDImagesPath, FDContainersPath}
+	dirs := []string{FDHomePath, FDTempPath, FDImagesPath, FDContainersPath}
 	return utils.EnsureDirs(dirs)
 }
 

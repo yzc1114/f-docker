@@ -2,9 +2,9 @@ package ps
 
 import (
 	"bufio"
+	"fdocker/image"
+	"fdocker/workdirs"
 	"fmt"
-	"github.com/shuveb/containers-the-hard-way/image"
-	"github.com/shuveb/containers-the-hard-way/workdirs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-type Executor struct {}
+type Executor struct{}
 
 func (e Executor) CmdName() string {
 	return "ps"
@@ -36,9 +36,9 @@ func New() Executor {
 
 type RunningContainerInfo struct {
 	ContainerId string
-	Image   string
-	Command string
-	PID     int
+	Image       string
+	Command     string
+	PID         int
 }
 
 func GetRunningContainers() ([]RunningContainerInfo, error) {

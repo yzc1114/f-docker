@@ -1,12 +1,11 @@
 package setupnetns
 
 import (
-	"github.com/shuveb/containers-the-hard-way/network"
-	"github.com/shuveb/containers-the-hard-way/utils"
+	"fdocker/network"
+	"fdocker/utils"
 )
 
 type Executor struct {
-
 }
 
 func New() Executor {
@@ -30,4 +29,3 @@ func (e Executor) Exec() {
 	acc := network.GetAccessor()
 	acc.SetupNewNetworkNamespace(containerID)
 }
-

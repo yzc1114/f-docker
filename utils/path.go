@@ -18,7 +18,6 @@ func EnsureDirs(dirs []string) error {
 	return nil
 }
 
-
 func CopyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {

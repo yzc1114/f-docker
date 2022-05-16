@@ -1,8 +1,8 @@
 package cgroups
 
 import (
+	"fdocker/utils"
 	"fmt"
-	"github.com/shuveb/containers-the-hard-way/utils"
 	"io/ioutil"
 	"os"
 	"runtime"
@@ -10,7 +10,6 @@ import (
 )
 
 type Accessor struct {
-
 }
 
 func GetAccessor() Accessor {
@@ -28,9 +27,9 @@ func (c Accessor) CreateCGroups(containerID string, createCGroupDirs bool) {
 	}
 
 	for _, cgroupDir := range cgroups {
-		utils.MustWithMsg(ioutil.WriteFile(cgroupDir + "/notify_on_release", []byte("1"), 0700),
+		utils.MustWithMsg(ioutil.WriteFile(cgroupDir+"/notify_on_release", []byte("1"), 0700),
 			"Unable to write to cgroup notification file")
-		utils.MustWithMsg(ioutil.WriteFile(cgroupDir + "/cgroup.procs",
+		utils.MustWithMsg(ioutil.WriteFile(cgroupDir+"/cgroup.procs",
 			[]byte(strconv.Itoa(os.Getpid())), 0700), "Unable to write to cgroup procs file")
 	}
 }
@@ -68,7 +67,7 @@ func (c Accessor) setMemoryLimit(containerID string, limitMB int, swapLimitInMB 
 	}
 }
 
-func (c Accessor) setCpuLimit(containerID string, limit float64)  {
+func (c Accessor) setCpuLimit(containerID string, limit float64) {
 	cfsPeriodPath := "/sys/fs/cgroup/cpu/fdocker/" + containerID +
 		"/cpu.cfs_period_us"
 	cfsQuotaPath := "/sys/fs/cgroup/cpu/fdocker/" + containerID +
@@ -84,12 +83,12 @@ func (c Accessor) setCpuLimit(containerID string, limit float64)  {
 		"Unable to write CFS period")
 
 	utils.MustWithMsg(ioutil.WriteFile(cfsQuotaPath,
-		[]byte(strconv.Itoa(int(1000000 * limit))), 0644),
+		[]byte(strconv.Itoa(int(1000000*limit))), 0644),
 		"Unable to write CFS period")
 
 }
 
-func (c Accessor) setPidsLimit(containerID string, limit int)  {
+func (c Accessor) setPidsLimit(containerID string, limit int) {
 	maxProcsPath := "/sys/fs/cgroup/pids/fdocker/" + containerID +
 		"/pids.max"
 

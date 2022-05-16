@@ -1,9 +1,8 @@
 package images
 
-import "github.com/shuveb/containers-the-hard-way/image"
+import "fdocker/image"
 
 type Executor struct {
-
 }
 
 func New() Executor {

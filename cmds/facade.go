@@ -1,14 +1,14 @@
 package cmds
 
 import (
-	"github.com/shuveb/containers-the-hard-way/cmds/impls/childmode"
-	"github.com/shuveb/containers-the-hard-way/cmds/impls/images"
-	"github.com/shuveb/containers-the-hard-way/cmds/impls/ps"
-	"github.com/shuveb/containers-the-hard-way/cmds/impls/rmi"
-	"github.com/shuveb/containers-the-hard-way/cmds/impls/run"
-	"github.com/shuveb/containers-the-hard-way/cmds/impls/setupnetns"
-	"github.com/shuveb/containers-the-hard-way/cmds/impls/setupveth"
-	cmdsinterface "github.com/shuveb/containers-the-hard-way/cmds/interface"
+	"fdocker/cmds/impls/childmode"
+	"fdocker/cmds/impls/images"
+	"fdocker/cmds/impls/ps"
+	"fdocker/cmds/impls/rmi"
+	"fdocker/cmds/impls/run"
+	"fdocker/cmds/impls/setupnetns"
+	"fdocker/cmds/impls/setupveth"
+	cmdsinterface "fdocker/cmds/interface"
 	"sort"
 )
 
@@ -21,8 +21,8 @@ func GetCmdExecutors() map[string]cmdsinterface.CmdExecutor {
 	return m
 }
 
-func getCmdExecutorList() []cmdsinterface.CmdExecutor{
-	executors := []cmdsinterface.CmdExecutor {
+func getCmdExecutorList() []cmdsinterface.CmdExecutor {
+	executors := []cmdsinterface.CmdExecutor{
 		childmode.New(),
 		images.New(),
 		ps.New(),

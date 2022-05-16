@@ -1,12 +1,12 @@
 package childmode
 
 import (
+	"fdocker/cgroups"
+	"fdocker/image"
+	"fdocker/network"
+	"fdocker/utils"
+	"fdocker/workdirs"
 	"fmt"
-	"github.com/shuveb/containers-the-hard-way/cgroups"
-	"github.com/shuveb/containers-the-hard-way/image"
-	"github.com/shuveb/containers-the-hard-way/network"
-	"github.com/shuveb/containers-the-hard-way/utils"
-	"github.com/shuveb/containers-the-hard-way/workdirs"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/sys/unix"
 	"log"

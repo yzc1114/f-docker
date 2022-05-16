@@ -2,11 +2,11 @@ package image
 
 import (
 	"encoding/json"
+	"fdocker/utils"
+	"fdocker/workdirs"
 	"fmt"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/shuveb/containers-the-hard-way/utils"
-	"github.com/shuveb/containers-the-hard-way/workdirs"
 	"io/ioutil"
 	"log"
 	"os"
@@ -15,14 +15,14 @@ import (
 )
 
 type Manifest struct {
-	Config string
+	Config   string
 	RepoTags []string
-	Layers []string
+	Layers   []string
 }
 
 type ConfigDetails struct {
-	Env []string	`json:"Env"`
-	Cmd []string	`json:"Cmd"`
+	Env []string `json:"Env"`
+	Cmd []string `json:"Cmd"`
 }
 
 type Config struct {
@@ -51,7 +51,7 @@ list of images we have on the system.
 type imageEntries map[string]string
 type imagesDB map[string]imageEntries
 
-type Accessor struct {}
+type Accessor struct{}
 
 func GetAccessor() Accessor {
 	return Accessor{}
@@ -60,7 +60,7 @@ func GetAccessor() Accessor {
 func (i Accessor) GetImageAndTagByHash(imageShaHash string) (string, string) {
 	idb := imagesDB{}
 	i.parseImagesMetadata(&idb)
-	for image,versions := range idb {
+	for image, versions := range idb {
 		for version, hash := range versions {
 			if hash == imageShaHash {
 				return image, version
@@ -79,7 +79,7 @@ func (i Accessor) GetManifestPathForImage(imageShaHex string) string {
 }
 
 func (i Accessor) GetConfigPathForImage(imageShaHex string) string {
-	return path.Join(i.GetBasePathForImage(imageShaHex), imageShaHex + ".json")
+	return path.Join(i.GetBasePathForImage(imageShaHex), imageShaHex+".json")
 }
 
 func (i Accessor) deleteTempImageFiles(imageShaHash string) {
@@ -138,7 +138,7 @@ func (i Accessor) unTarFile(imageShaHex string) {
 func (i Accessor) processLayerTarballs(imageShaHex string, fullImageHex string) {
 	tmpPathDir := path.Join(workdirs.TempPath(), imageShaHex)
 	pathManifest := path.Join(tmpPathDir, "manifest.json")
-	pathConfig := path.Join(tmpPathDir, fullImageHex + ".json")
+	pathConfig := path.Join(tmpPathDir, fullImageHex+".json")
 
 	mani := i.ParseManifest(pathManifest)
 	imagesDir := path.Join(workdirs.ImagesPath(), imageShaHex)
@@ -149,7 +149,7 @@ func (i Accessor) processLayerTarballs(imageShaHex string, fullImageHex string) 
 		log.Printf("Uncompressing layer to: %s \n", imageLayerDir)
 		_ = os.MkdirAll(imageLayerDir, 0755)
 		srcLayer := path.Join(tmpPathDir, layer)
-		if err:= utils.UnTar(srcLayer, imageLayerDir); err != nil {
+		if err := utils.UnTar(srcLayer, imageLayerDir); err != nil {
 			log.Fatalf("Unable to untar layer file: %s: %v\n", srcLayer, err)
 		}
 	}
@@ -174,7 +174,7 @@ func (i Accessor) ParseContainerConfig(imageShaHex string) Config {
 	return imgConfig
 }
 
-func (i Accessor) parseImagesMetadata(idb *imagesDB)  {
+func (i Accessor) parseImagesMetadata(idb *imagesDB) {
 	imagesDBPath := path.Join(workdirs.ImagesPath(), "images.json")
 	if _, err := os.Stat(imagesDBPath); os.IsNotExist(err) {
 		/* If it doesn't exist create an empty DB */

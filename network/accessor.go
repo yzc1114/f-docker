@@ -1,9 +1,9 @@
 package network
 
 import (
+	"fdocker/utils"
+	"fdocker/workdirs"
 	"fmt"
-	"github.com/shuveb/containers-the-hard-way/utils"
-	"github.com/shuveb/containers-the-hard-way/workdirs"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 	"log"
@@ -12,7 +12,7 @@ import (
 	"path"
 )
 
-type Accessor struct {}
+type Accessor struct{}
 
 func GetAccessor() Accessor {
 	return Accessor{}
@@ -22,7 +22,7 @@ func GetAccessor() Accessor {
 	Go through the list of interfaces and return true if the fdocker0 bridge is up
 */
 
-func (n Accessor) IsFDockerBridgeUp() (bool, error) {
+func (n Accessor) IsBridgeSetUp() (bool, error) {
 	if links, err := netlink.LinkList(); err != nil {
 		log.Printf("Unable to get list of links.\n")
 		return false, err
@@ -36,14 +36,7 @@ func (n Accessor) IsFDockerBridgeUp() (bool, error) {
 	}
 }
 
-/*
-	This function sets up the "fdocker0" bridge, which is our main bridge
-	interface. To keep things simple, we assign the hopefully unassigned
-	and obscure private IP 172.31.0.1 to it, which is from the range of
-	IPs which we will also use for our containers.
-*/
-
-func (n Accessor) SetupFDockerBridge() error {
+func (n Accessor) SetupBridge() error {
 	linkAttrs := netlink.NewLinkAttrs()
 	linkAttrs.Name = "fdocker0"
 	fdockerBridge := &netlink.Bridge{LinkAttrs: linkAttrs}
@@ -51,8 +44,8 @@ func (n Accessor) SetupFDockerBridge() error {
 		return err
 	}
 	addr, _ := netlink.ParseAddr("172.31.0.1/16")
-	netlink.AddrAdd(fdockerBridge, addr)
-	netlink.LinkSetUp(fdockerBridge)
+	utils.Must(netlink.AddrAdd(fdockerBridge, addr))
+	utils.Must(netlink.LinkSetUp(fdockerBridge))
 	return nil
 }
 
@@ -69,19 +62,20 @@ func (n Accessor) SetupVirtualEthOnHost(containerID string) error {
 	if err := netlink.LinkAdd(veth0Struct); err != nil {
 		return err
 	}
-	netlink.LinkSetUp(veth0Struct)
+	utils.Must(netlink.LinkSetUp(veth0Struct))
 	fdockerBridge, _ := netlink.LinkByName("fdocker0")
-	netlink.LinkSetMaster(veth0Struct, fdockerBridge)
-
+	utils.Must(netlink.LinkSetMaster(veth0Struct, fdockerBridge))
 	return nil
 }
 
+// SetupContainerNetworkInterface Network Step4: 将虚拟以太网线进行绑定。
 func (n Accessor) SetupContainerNetworkInterface(containerID string) {
-	n.setupContainerNetworkInterfaceStep1(containerID)
-	n.setupContainerNetworkInterfaceStep2(containerID)
+	n.setContainerVETHToNewNs(containerID)
+	n.setContainerIPAndRoute(containerID)
 }
 
-func (n Accessor) setupContainerNetworkInterfaceStep1(containerID string) {
+func (n Accessor) setContainerVETHToNewNs(containerID string) {
+	// 获取已经存在的网络命名空间对应的文件夹路径
 	nsMount := n.getNetNsPath(containerID)
 
 	fd, err := unix.Open(nsMount, unix.O_RDONLY, 0)
@@ -89,18 +83,18 @@ func (n Accessor) setupContainerNetworkInterfaceStep1(containerID string) {
 	if err != nil {
 		log.Fatalf("Unable to open: %v\n", err)
 	}
-	/* Set veth1 of the new container to the new network namespace */
 	veth1 := "veth1_" + containerID[:6]
 	veth1Link, err := netlink.LinkByName(veth1)
 	if err != nil {
 		log.Fatalf("Unable to fetch veth1: %v\n", err)
 	}
+	// 设置这个新的容器的虚拟以太网线到新的命名空间中来。
 	if err := netlink.LinkSetNsFd(veth1Link, fd); err != nil {
 		log.Fatalf("Unable to set network namespace for veth1: %v\n", err)
 	}
 }
 
-func (n Accessor) setupContainerNetworkInterfaceStep2(containerID string) {
+func (n Accessor) setContainerIPAndRoute(containerID string) {
 	nsMount := n.getNetNsPath(containerID)
 	fd, err := unix.Open(nsMount, unix.O_RDONLY, 0)
 	defer func() {
@@ -119,14 +113,16 @@ func (n Accessor) setupContainerNetworkInterfaceStep2(containerID string) {
 		log.Fatalf("Unable to fetch veth1: %v\n", err)
 	}
 	addr, _ := netlink.ParseAddr(n.createIPAddress() + "/16")
+	// 为这个容器的以太网接口设置ip地址。
 	if err := netlink.AddrAdd(veth1Link, addr); err != nil {
 		log.Fatalf("Error assigning IP to veth1: %v\n", err)
 	}
 
-	/* Bring up the interface */
+	// 正式开启这个网络接口设备。相当于命令：ip link set $link up
 	utils.MustWithMsg(netlink.LinkSetUp(veth1Link), "Unable to bring up veth1")
 
-	/* Add a default route */
+	// 为该网络接口设置默认网关。即设置到fdocker0这个网桥的ip地址即可。
+	// 设置完以后，即可通过该网关找到其他连接这个网关的容器的ip地址了。
 	route := netlink.Route{
 		Scope:     netlink.SCOPE_UNIVERSE,
 		LinkIndex: veth1Link.Attrs().Index,
@@ -136,15 +132,7 @@ func (n Accessor) setupContainerNetworkInterfaceStep2(containerID string) {
 	utils.MustWithMsg(netlink.RouteAdd(&route), "Unable to add default route")
 }
 
-/*
-	This is the function that sets the IP address for the local interface.
-	There seems to be a bug in the netlink library in that it does not
-	succeed in looking up the local interface by name, always returning an
-	error. As a workaround, we loop through the interfaces, compare the name,
-	set the IP and make the interface up.
-
-*/
-
+// SetupLocalInterface Network Step5: 设置回环地址。
 func (n Accessor) SetupLocalInterface() {
 	links, _ := netlink.LinkList()
 	for _, link := range links {
@@ -158,6 +146,7 @@ func (n Accessor) SetupLocalInterface() {
 	}
 }
 
+// SetupNewNetworkNamespace Network Step3: 设置新的命名空间。
 func (n Accessor) SetupNewNetworkNamespace(containerID string) {
 	_ = utils.EnsureDirs([]string{workdirs.NetNsPath()})
 	nsMount := n.getNetNsPath(containerID)
@@ -171,14 +160,15 @@ func (n Accessor) SetupNewNetworkNamespace(containerID string) {
 		log.Fatalf("Unable to open: %v\n", err)
 	}
 
+	// 创建新的网络命名空间，将本进程与原有的命名空间脱离。
 	if err := unix.Unshare(unix.CLONE_NEWNET); err != nil {
 		log.Fatalf("Unshare system call failed: %v\n", err)
 	}
+	// 使用bind mount的方法，将该命名空间与一个文件进行绑定。即绑定到了{nsMount}这个文件夹当中。
+	// 为什么要绑定：因为当一个命名空间的所有进程都退出后，该命名空间就会消失，
+	// 然而，如果将该命名空间对应的文件夹进行了bind mount，即可打破这个规定，即使当所有进程都退出，该命名空间依然存在。
 	if err := unix.Mount("/proc/self/ns/net", nsMount, "bind", unix.MS_BIND, ""); err != nil {
 		log.Fatalf("Mount system call failed: %v\n", err)
-	}
-	if err := unix.Setns(fd, unix.CLONE_NEWNET); err != nil {
-		log.Fatalf("Setns system call failed: %v\n", err)
 	}
 }
 

@@ -1,14 +1,13 @@
 package rmi
 
 import (
-	"github.com/shuveb/containers-the-hard-way/cmds/impls/ps"
-	"github.com/shuveb/containers-the-hard-way/image"
-	"github.com/shuveb/containers-the-hard-way/utils"
+	"fdocker/cmds/impls/ps"
+	"fdocker/image"
+	"fdocker/utils"
 	"log"
 )
 
 type Executor struct {
-
 }
 
 func New() Executor {
@@ -43,7 +42,7 @@ func DeleteImageByHash(imageShaHex string) {
 		log.Fatalf("Unable to get running containers list: %v\n", err)
 	}
 	for _, container := range containers {
-		if container.Image == imgName + ":" + imgTag {
+		if container.Image == imgName+":"+imgTag {
 			log.Fatalf("Cannot delete image becuase it is in use by: %s",
 				container.ContainerId)
 		}
