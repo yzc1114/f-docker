@@ -67,7 +67,7 @@ func execContainerCommand(mem int, swap int, pids int, cpus float64,
 	cGroupsAccessor := cgroups.GetAccessor()
 	imgConfig := imgAccessor.ParseContainerConfig(imageShaHex)
 	utils.MustWithMsg(unix.Sethostname([]byte(containerID)), "Unable to set hostname")
-	utils.MustWithMsg(netAccessor.JoinContainerNetworkNamespace(containerID), "Unable to join container network namespace")
+	//utils.MustWithMsg(netAccessor.JoinContainerNetworkNamespace(containerID), "Unable to join container network namespace")
 	cGroupsAccessor.CreateCGroups(containerID, true)
 	cGroupsAccessor.ConfigureCGroups(containerID, mem, swap, pids, cpus)
 	utils.MustWithMsg(copyNameserverConfig(containerID), "Unable to copy resolve.conf")
@@ -79,7 +79,7 @@ func execContainerCommand(mem int, swap int, pids int, cpus float64,
 	utils.MustWithMsg(unix.Mount("tmpfs", "/dev", "tmpfs", 0, ""), "Unable to mount tmpfs on /dev")
 	utils.Must(utils.EnsureDirs([]string{"/dev/pts"}))
 	utils.MustWithMsg(unix.Mount("devpts", "/dev/pts", "devpts", 0, ""), "Unable to mount devpts")
-	utils.MustWithMsg(unix.Mount("sysfs", "/sys", "sysfs", 0, ""), "Unable to mount sysfs")
+	//utils.MustWithMsg(unix.Mount("sysfs", "/sys", "sysfs", 0, ""), "Unable to mount sysfs")
 	netAccessor.SetupLocalInterface()
 	cmd.Env = imgConfig.Config.Env
 	if err := cmd.Run(); err != nil {
@@ -87,7 +87,7 @@ func execContainerCommand(mem int, swap int, pids int, cpus float64,
 	}
 	utils.Must(unix.Unmount("/dev/pts", 0))
 	utils.Must(unix.Unmount("/dev", 0))
-	utils.Must(unix.Unmount("/sys", 0))
+	//utils.Must(unix.Unmount("/sys", 0))
 	utils.Must(unix.Unmount("/proc", 0))
 	utils.Must(unix.Unmount("/tmp", 0))
 }

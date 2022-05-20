@@ -69,16 +69,18 @@ func (n Accessor) SetupVirtualEthOnHost(containerID string) error {
 }
 
 // SetupContainerNetworkInterface Network Step4: 将虚拟以太网线进行绑定。
-func (n Accessor) SetupContainerNetworkInterface(containerID string) {
-	n.setContainerVETHToNewNs(containerID)
-	n.setContainerIPAndRoute(containerID)
+func (n Accessor) SetupContainerNetworkInterface(containerID string, pid int) {
+	n.setContainerVETHToNewNs(containerID, pid)
+	n.setContainerIPAndRoute(containerID, pid)
 }
 
-func (n Accessor) setContainerVETHToNewNs(containerID string) {
+func (n Accessor) setContainerVETHToNewNs(containerID string, pid int) {
 	// 获取已经存在的网络命名空间对应的文件夹路径
-	nsMount := n.getNetNsPath(containerID)
+	//nsMount := n.getNetNsPath(containerID)
+	nsPath := fmt.Sprintf("/proc/%d/ns/net", pid)
+	//fmt.Printf("nsPath: %s\n", nsPath)
 
-	fd, err := unix.Open(nsMount, unix.O_RDONLY, 0)
+	fd, err := unix.Open(nsPath, unix.O_RDONLY, 0)
 	defer unix.Close(fd)
 	if err != nil {
 		log.Fatalf("Unable to open: %v\n", err)
@@ -94,9 +96,12 @@ func (n Accessor) setContainerVETHToNewNs(containerID string) {
 	}
 }
 
-func (n Accessor) setContainerIPAndRoute(containerID string) {
-	nsMount := n.getNetNsPath(containerID)
-	fd, err := unix.Open(nsMount, unix.O_RDONLY, 0)
+func (n Accessor) setContainerIPAndRoute(containerID string, pid int) {
+	//nsMount := n.getNetNsPath(containerID)
+	nsPath := fmt.Sprintf("/proc/%d/ns/net", pid)
+	//fmt.Printf("nsPath: %s\n", nsPath)
+
+	fd, err := unix.Open(nsPath, unix.O_RDONLY, 0)
 	defer func() {
 		_ = unix.Close(fd)
 	}()

@@ -16,6 +16,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 type Executor struct {
@@ -153,23 +154,6 @@ func unmountContainerFs(containerID string) {
 func prepareAndExecuteContainer(mem int, swap int, pids int, cpus float64,
 	containerID string, imageShaHex string, cmdArgs []string) {
 
-	// Network Step3: Set up the network namespace
-	cmd := &exec.Cmd{
-		Path:   "/proc/self/exe",
-		Args:   []string{"/proc/self/exe", "setup-netns", containerID},
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
-	utils.Must(cmd.Run())
-
-	// Network Step4: Set up the virtual interface on namespace
-	cmd = &exec.Cmd{
-		Path:   "/proc/self/exe",
-		Args:   []string{"/proc/self/exe", "setup-veth", containerID},
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
-	utils.Must(cmd.Run())
 	/*
 		From namespaces(7)
 		       Namespace Flag            Isolates
@@ -204,7 +188,7 @@ func prepareAndExecuteContainer(mem int, swap int, pids int, cpus float64,
 	args := append([]string{containerID}, cmdArgs...)
 	args = append(opts, args...)
 	args = append([]string{"child-mode"}, args...)
-	cmd = exec.Command("/proc/self/exe", args...)
+	cmd := exec.Command("/proc/self/exe", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -212,9 +196,46 @@ func prepareAndExecuteContainer(mem int, swap int, pids int, cpus float64,
 		Cloneflags: unix.CLONE_NEWPID |
 			unix.CLONE_NEWNS |
 			unix.CLONE_NEWUTS |
+			unix.CLONE_NEWUSER |
+			unix.CLONE_NEWNET |
 			unix.CLONE_NEWIPC,
+		UidMappings: []syscall.SysProcIDMap{
+			{
+				ContainerID: 0,
+				HostID:      syscall.Getuid(),
+				Size:        1,
+			},
+		},
+		GidMappings: []syscall.SysProcIDMap{
+			{
+				ContainerID: 0,
+				HostID:      syscall.Getgid(),
+				Size:        1,
+			},
+		},
+		Credential: &syscall.Credential{
+			Uid: uint32(syscall.Getuid()),
+			Gid: uint32(syscall.Getgid()),
+		},
+		GidMappingsEnableSetgroups: true,
+		AmbientCaps: []uintptr{
+			unix.CAP_SYS_ADMIN,
+		},
 	}
-	utils.Must(cmd.Run())
+	utils.Must(cmd.Start())
+
+	pid := cmd.Process.Pid
+
+	setupvethcmd := &exec.Cmd{
+		Path:   "/proc/self/exe",
+		Args:   []string{"/proc/self/exe", "setup-veth", containerID, strconv.Itoa(pid)},
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+
+	utils.Must(setupvethcmd.Run())
+
+	utils.Must(cmd.Wait())
 }
 
 func initContainer(args *runArgs) {

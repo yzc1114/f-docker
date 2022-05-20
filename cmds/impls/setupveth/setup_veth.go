@@ -3,6 +3,7 @@ package setupveth
 import (
 	"fdocker/network"
 	"fdocker/utils"
+	"strconv"
 )
 
 type Executor struct {
@@ -25,7 +26,9 @@ func (e Executor) Usage() string {
 }
 
 func (e Executor) Exec() {
-	containerID := utils.ParseSingleArg("Please pass container ID to run")
+	args := utils.ParseArgs("Please pass container ID and pid to run")
+	containerID, pidStr := args[0], args[1]
+	pid, _ := strconv.Atoi(pidStr)
 	acc := network.GetAccessor()
-	acc.SetupContainerNetworkInterface(containerID)
+	acc.SetupContainerNetworkInterface(containerID, pid)
 }
